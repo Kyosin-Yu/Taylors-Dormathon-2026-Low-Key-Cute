@@ -1,57 +1,51 @@
 import os
+
 from dotenv import load_dotenv
-from google import genai
 
 load_dotenv()
-API_KEY = os.getenv("GEMINI_API_KEY")
-client = None
 
 
-def get_client():
-    global client
+def generate_explanation(prediction, factors=None):
+    api_key = os.getenv("GEMINI_API_KEY")
 
-    if not API_KEY:
-        raise ValueError("GEMINI_API_KEY is not configured.")
+    if not api_key:
+        raise RuntimeError("GEMINI_API_KEY is not configured.")
 
-    if client is None:
-        client = genai.Client(
-            api_key=API_KEY
+    try:
+        from google import genai
+    except ImportError:
+        raise RuntimeError(
+            "google-genai package is not installed."
         )
 
-    return client
+    client = genai.Client(api_key=api_key)
 
-
-def generate_explanation(
-    prediction: dict,
-    factors: list[str] | None = None
-) -> str:
-
-    factors = factors or []
+    factors_text = (
+        ", ".join(map(str, factors))
+        if factors
+        else "No contributing factors available."
+    )
 
     prompt = f"""
-You are a decision-support assistant.
-
-A predictive machine learning model produced the following result:
+You are an AI decision-support assistant.
 
 Prediction:
 - Label: {prediction["label"]}
 - Score: {prediction["score"]}
 
-Known contributing factors:
-{factors}
+Contributing factors:
+{factors_text}
 
-Your task:
-1. Explain the result in simple language.
-2. Do not change the prediction.
-3. Do not generate a new probability.
-4. Keep the explanation concise.
+Explain the prediction clearly in 2-3 sentences.
+
+Do not invent facts.
+Do not change the prediction.
+Focus only on helping the user understand the result.
 """
 
-    gemini = get_client()
-
-    response = gemini.models.generate_content(
+    response = client.models.generate_content(
         model="gemini-2.5-flash",
-        contents=prompt
+        contents=prompt,
     )
 
     return response.text

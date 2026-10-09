@@ -1,121 +1,257 @@
-import { useState } from "react";
-import axios from "axios";
+import { useEffect, useState } from "react";
+
+import SystemStatus from "./components/SystemStatus";
+
+import InputModeSelector from "./components/InputModeSelector";
+import InputPanel from "./components/InputPanel";
+import TextInputPanel from "./components/TextInputPanel";
+import TimeSeriesInputPanel from "./components/TimeSeriesInputPanel";
+
+import PredictionCard from "./components/PredictionCard";
+import PredictionChart from "./components/PredictionChart";
+import ExplanationCard from "./components/ExplanationCard";
+import RecommendationCard from "./components/RecommendationCard";
+
+import {
+  getHealth,
+  getConfig,
+  runTabularPrediction,
+  runTextPrediction,
+  runTimeSeriesPrediction,
+} from "./services/api";
+
 
 function App() {
-  const [values, setValues] = useState([80, 75, 90, 70]);
+  // Input mode
+  const [mode, setMode] = useState("tabular");
+
+  // Tabular input
+  const [values, setValues] = useState([
+    80,
+    75,
+    90,
+    70,
+  ]);
+
+  // Text input
+  const [text, setText] = useState("");
+
+  // Time series input
+  const [series, setSeries] = useState(
+    "10, 15, 20, 25, 30"
+  );
+
+  // Prediction result
   const [result, setResult] = useState(null);
+
+  // UI states
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
-  const handleChange = (index, value) => {
+  // Backend status
+  const [backendOnline, setBackendOnline] =
+    useState(false);
+
+  const [predictionMode, setPredictionMode] =
+    useState("");
+
+  // Check backend when React loads
+  useEffect(() => {
+    const checkBackend = async () => {
+      try {
+        await getHealth();
+        setBackendOnline(true);
+        const config = await getConfig();
+        setPredictionMode(
+          config.prediction_mode || "Unknown"
+        );
+      } catch (error) {
+        console.error(error);
+
+        setBackendOnline(false);
+        setPredictionMode("Unknown");
+      }
+    };
+    checkBackend();
+  }, []);
+
+  // Handle numeric input
+  const handleValueChange = (index, value) => {
     const updatedValues = [...values];
+
     updatedValues[index] = Number(value);
+
     setValues(updatedValues);
   };
 
-  const runPrediction = async () => {
+
+  // Handle input mode change
+  const handleModeChange = (newMode) => {
+    setMode(newMode);
+
+    setResult(null);
+    setError("");
+  };
+
+
+  // Run prediction
+  const handlePrediction = async () => {
     setLoading(true);
     setError("");
     setResult(null);
 
     try {
-      const response = await axios.post(
-        "http://127.0.0.1:8000/predict",
-        {
-          values: values,
+      let data;
+
+      // Numeric / Tabular
+      if (mode === "tabular") {
+        data = await runTabularPrediction(values);
+      }
+
+      // Text
+      else if (mode === "text") {
+        data = await runTextPrediction(text);
+      }
+
+      // Time Series
+      else if (mode === "timeseries") {
+        const parsedValues = series
+          .split(",")
+          .map((value) => Number(value.trim()))
+          .filter((value) => !Number.isNaN(value));
+
+        if (parsedValues.length === 0) {
+          throw new Error(
+            "Please enter valid time-series values."
+          );
         }
+
+        data = await runTimeSeriesPrediction(
+          parsedValues
+        );
+      }
+
+      setResult(data);
+
+    } catch (error) {
+      console.error(error);
+
+      setError(
+        "Prediction failed. Check the selected backend prediction mode."
       );
 
-      setResult(response.data);
-    } catch (err) {
-      console.error(err);
-      setError("Unable to connect to the prediction backend.");
     } finally {
       setLoading(false);
     }
   };
 
+  // UI
   return (
     <div
       style={{
-        maxWidth: "800px",
+        maxWidth: "900px",
         margin: "40px auto",
         padding: "20px",
         fontFamily: "Arial",
       }}
     >
       <h1>Team Lowkey Cute</h1>
-      <h2>Predictive Decision Support Prototype</h2>
+
+      <h2>
+        Predictive Decision Support Prototype
+      </h2>
 
       <p>
-        Domain-agnostic frontend used to test the prediction pipeline.
+        Domain-agnostic prototype for testing
+        different predictive input types.
       </p>
 
       <hr />
 
-      <h3>Input Data</h3>
+      {/* Backend status */}
+      <SystemStatus
+        backendOnline={backendOnline}
+        predictionMode={predictionMode}
+      />
 
-      {values.map((value, index) => (
-        <div key={index} style={{ marginBottom: "10px" }}>
-          <label>Feature {index + 1}</label>
-          <br />
+      {/* Input mode selector */}
+      <InputModeSelector
+        mode={mode}
+        onChange={handleModeChange}
+      />
 
-          <input
-            type="number"
-            value={value}
-            onChange={(event) =>
-              handleChange(index, event.target.value)
-            }
-          />
-        </div>
-      ))}
+      {/* Tabular */}
+      {mode === "tabular" && (
+        <InputPanel
+          values={values}
+          onChange={handleValueChange}
+          onPredict={handlePrediction}
+          loading={loading}
+        />
+      )}
 
-      <button
-        onClick={runPrediction}
-        disabled={loading}
-      >
-        {loading ? "Running..." : "Run Prediction"}
-      </button>
+      {/* Text */}
+      {mode === "text" && (
+        <TextInputPanel
+          text={text}
+          onChange={setText}
+          onPredict={handlePrediction}
+          loading={loading}
+        />
+      )}
 
+      {/* Time Series */}
+      {mode === "timeseries" && (
+        <TimeSeriesInputPanel
+          series={series}
+          onChange={setSeries}
+          onPredict={handlePrediction}
+          loading={loading}
+        />
+      )}
+
+      {/* Error */}
       {error && (
-        <p style={{ marginTop: "20px" }}>
+        <p
+          style={{
+            marginTop: "20px",
+            color: "#ef4444",
+          }}
+        >
           {error}
         </p>
       )}
 
+      {/* Prediction result */}
       {result && (
-        <div style={{ marginTop: "30px" }}>
-          <hr />
+        <>
+          <hr
+            style={{
+              marginTop: "30px",
+            }}
+          />
 
-          <h2>Prediction Result</h2>
+          <PredictionCard
+            prediction={result.prediction}
+          />
 
-          <h3>{result.prediction.label}</h3>
+          <PredictionChart
+            score={result.prediction.score}
+          />
 
-          <p>
-            Score:{" "}
-            {(result.prediction.score * 100).toFixed(1)}%
-          </p>
+          <ExplanationCard
+            explanation={result.explanation}
+          />
 
-          <h3>Explanation</h3>
-
-          <p>{result.explanation}</p>
-
-          <h3>Recommendations</h3>
-
-          <ol>
-            {result.recommendations.map(
-              (recommendation, index) => (
-                <li key={index}>
-                  {recommendation}
-                </li>
-              )
-            )}
-          </ol>
-
-          <p>
-            Support Source: {result.support_source}
-          </p>
-        </div>
+          <RecommendationCard
+            recommendations={
+              result.recommendations
+            }
+            supportSource={
+              result.support_source
+            }
+          />
+        </>
       )}
     </div>
   );
