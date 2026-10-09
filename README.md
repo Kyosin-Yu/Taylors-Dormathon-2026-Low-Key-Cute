@@ -53,7 +53,7 @@ User Input
 - Working Streamlit or React demo
 
 ## Backend Structure
-
+```
 backend/
 ├── main.py
 ├── prediction/
@@ -67,6 +67,7 @@ backend/
 │   └── supabase_service.py
 └── schemas/
     └── prediction.py
+```
 
 ## Current Limitations
 - Final problem domain is not known yet
