@@ -3,11 +3,12 @@
 # will be configured once we get questions.
 
 from pydantic import BaseModel
-from typing import List
+from typing import List, Optional
 
 
 class PredictionRequest(BaseModel):
-    values: List[float]
+    values: Optional[List[float]] = None
+    text: Optional[str] = None
 
 
 class PredictionResult(BaseModel):
