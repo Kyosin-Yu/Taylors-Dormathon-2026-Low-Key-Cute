@@ -29,7 +29,7 @@ export default function SensorTimeSeries({ csv, selectedRow, onSelectRow, disabl
                 <XAxis dataKey="cycle" type="number" domain={['dataMin', 'dataMax']} label={{ value: 'Operating cycle', position: 'bottom', offset: 8 }} />
                 <YAxis domain={['auto', 'auto']} tickFormatter={(value) => Number(value.toPrecision(5))} width={85} />
                 <Tooltip labelFormatter={(cycle) => `Cycle ${cycle}`} />
-                <ReferenceLine x={selectedCycle} stroke="#ea580c" strokeDasharray="4 4" label="Selected" />
+                <ReferenceLine x={selectedCycle} stroke="#ea580c" strokeDasharray="4 4" label={{ value: 'Selected', position: 'insideTopRight', fill: '#9a3412' }} />
                 <Line type="linear" dataKey="value" name={sensor} stroke="#0284c7" strokeWidth={2} dot={points.length <= 50} isAnimationActive={false} />
               </LineChart>
             </ResponsiveContainer>
