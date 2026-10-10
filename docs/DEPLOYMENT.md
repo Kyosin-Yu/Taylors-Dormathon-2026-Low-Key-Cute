@@ -57,9 +57,12 @@ Upload `frontend/public/cmapss-timeseries-sample.csv` (479 real training rows
 for engines 1 and 2), or your own CSV with the 17 required numeric features.
 `unit_number` is optional but recommended for files with multiple engines.
 The chart sorts by `time_cycles`, displays one selected sensor and engine,
-and marks the selected prediction row. The row selector can access every row,
-including those beyond the five-row preview. Repeated cycles within an engine
-are flagged rather than connected into a misleading trajectory.
+and includes only measurements at or before Analyze at Cycle. Its controls can
+access every valid cycle, including those beyond the five-row preview. Sensor
+options come from sensor_* headers. Invalid measurements and all conflicting
+rows at duplicate cycles are excluded with notices. Descriptive statistics use
+the same past/current measurements as the chart. See UI_INTEGRATION.md for
+manual checks and single-row handling.
 
 The graph displays measured sensor history, not future sensor forecasts or
 batch RUL predictions. Each prediction still analyzes the selected row only.

@@ -4,6 +4,7 @@ import "./App.css";
 import { parseCsv } from "./services/csv";
 import ReactMarkdown from "react-markdown";
 import SensorTimeSeries from "./components/SensorTimeSeries";
+import { engineHistory, numericValue } from "./services/timeSeries";
 
 // Required CSV columns match the forecasting model metadata.
 const FIELDS = [
@@ -78,8 +79,6 @@ const button = {
 
 // ---------- CSV helpers ----------
 
-const isNum = (c) => c !== "" && Number.isFinite(Number(c));
-
 function App() {
   // ----- core state -----
   const [values, setValues] = useState([]);
@@ -132,7 +131,7 @@ function App() {
   const applyRow = (data, index) => {
     if (loading) return;
     setSelectedRow(index);
-    setValues(data.numericIdx.map((c) => Number(data.rows[index][c])));
+    setValues(data.numericIdx.map((c) => numericValue(data.rows[index][c]) ?? ""));
     setResult(null);
     setError("");
   };
@@ -159,21 +158,14 @@ function App() {
       return;
     }
 
-    const missing = FIELDS.filter((name) => !headers.includes(name));
-    if (missing.length) {
-      setCsvError(`Missing required columns: ${missing.join(", ")}`);
-      return;
-    }
     const numericIdx = FIELDS.map((name) => headers.indexOf(name));
-    const invalidRow = rows.findIndex((row) => numericIdx.some((i) => !isNum(row[i] ?? "")));
-    if (invalidRow >= 0) {
-      setCsvError(`Row ${invalidRow + 1} contains missing or invalid sensor values.`);
-      return;
-    }
-
     const data = { name: file.name, headers, rows, numericIdx };
     setCsv(data);
-    applyRow(data, 0);
+    // Open the first identified engine at its latest cycle so history is visible.
+    const history = engineHistory(data, 0);
+    const firstUnitRow = history.unitColumn < 0 ? 0 : rows.findIndex((row) => String(row[history.unitColumn] ?? "").trim() !== "");
+    const firstEngine = engineHistory(data, Math.max(0, firstUnitRow));
+    applyRow(data, firstEngine.engineRows.at(-1)?.rowIndex ?? 0);
   };
 
   const removeCsv = () => {
@@ -414,7 +406,7 @@ function App() {
                 <h3 style={title}>Upload sensor CSV</h3>
                 <p>C-MAPSS remaining useful life · {predictionMode || "Checking mode…"}</p>
                 {online && predictionMode !== "forecasting" && <p role="alert">Set the backend prediction mode to forecasting to use this dashboard.</p>}
-                <p>Upload a CSV with all 17 required feature columns, then select a row to analyze. <a href="/cmapss-sample.csv" download>Download sample CSV</a></p>
+                <p>Upload historical rows with time_cycles and sensor_* columns. Include unit_number for multiple engines. RUL prediction requires all 17 model features on the selected row. <a href="/cmapss-sample.csv" download>Download single-row sample CSV</a> · <a href="/cmapss-timeseries-sample.csv" download>Download time series sample</a></p>
 
                 <div
                   onDragOver={(e) => { e.preventDefault(); setDragOver(true); }}
@@ -493,12 +485,13 @@ function App() {
                   <button
                     style={{ ...button, opacity: loading || !csv || !online || predictionMode !== "forecasting" ? 0.5 : 1 }}
                     onClick={() => runPrediction()}
-                    disabled={loading || !csv || !online || predictionMode !== "forecasting"}
+                    disabled={loading || !csv || !online || predictionMode !== "forecasting" || values.length !== FIELDS.length || values.some((value) => value === "" || !Number.isFinite(Number(value)))}
                   >
                     {loading ? "Analyzing…" : "Run prediction"}
                   </button>
                 </div>
                 {!csv && <p style={{ color: "#64748B", fontSize: 13 }}>Upload a valid CSV to enable prediction.</p>}
+                {csv && values.some((value) => value === "") && <p role="status">Sensor history is available, but this row is missing valid model features. Select a row with all 17 required numeric features to run RUL prediction.</p>}
 
                 {error && <p style={{ color: "#dc2626", marginBottom: 0 }}>{error}</p>}
               </div>
@@ -522,7 +515,7 @@ function App() {
                     <div key={name} style={{ marginBottom: 20 }}>
                       <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 8, fontSize: 13 }}>
                         <span style={{ color: "#334155", fontWeight: 500 }}>{name}</span>
-                        <span style={{ color: "#64748B", fontWeight: 600 }}>{values[i]}</span>
+                        <span style={{ color: "#64748B", fontWeight: 600 }}>{values[i] === "" ? "Unavailable" : values[i]}</span>
                       </div>
                       <div style={{ height: 9, background: "#E2E8F0", borderRadius: 10, overflow: "hidden" }}>
                         <div
