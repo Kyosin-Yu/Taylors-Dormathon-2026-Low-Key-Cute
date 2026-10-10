@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from "react";
 import { checkHealth, predict, errorMessage, normalizePrediction, chat } from "./api";
 import "./App.css";
 import { parseCsv } from "./services/csv";
-
+import ReactMarkdown from "react-markdown";
 
 // C-MAPSS feature names and sample input from the existing backend demo.
 
@@ -375,14 +375,14 @@ function App() {
                   <div key={i} style={{ display: "flex", justifyContent: user ? "flex-end" : "flex-start", marginBottom: 10 }}>
                     <div
                       style={{
-                        maxWidth: "75%", padding: "10px 14px", lineHeight: 1.5, whiteSpace: "pre-wrap",
+                        maxWidth: "75%", padding: "10px 14px", lineHeight: 1.5, whiteSpace: user || m.error ? "pre-wrap" : "normal",
                         borderRadius: 14, borderBottomRightRadius: user ? 4 : 14, borderBottomLeftRadius: user ? 14 : 4,
                         background: user ? "#0ea5e9" : m.error ? "#fef2f2" : "#fff",
                         color: user ? "#fff" : m.error ? "#b91c1c" : "#1e293b",
                         boxShadow: user ? "none" : "0 1px 2px rgba(15,23,42,.08)",
                       }}
                     >
-                      {m.text}
+                      {user || m.error ? m.text : <div className="chat-md"><ReactMarkdown>{m.text}</ReactMarkdown></div>}
                     </div>
                   </div>
                 );
