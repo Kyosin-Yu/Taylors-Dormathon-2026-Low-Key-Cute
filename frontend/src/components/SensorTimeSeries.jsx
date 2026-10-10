@@ -17,31 +17,30 @@ export default function SensorTimeSeries({ csv, selectedRow, onSelectRow, disabl
   };
   return (
     <section className="sensor-history">
-      <h3>Sensor History Over Operating Cycles</h3>
-      <p className="sensor-history-description">Measured sensor values up to the selected operating cycle. This chart shows historical engine behaviour, not future predictions.</p>
-      {!csv ? <p>Upload a CSV with multiple cycles to explore a trend. <a href="/cmapss-timeseries-sample.csv" download>Download time series sample</a></p> : <>
+      <h2>2. Explore engine history</h2>
+      <p className="sensor-history-description">Recorded sensor values up to your selected cycle.</p>
+      {!csv ? <p className="muted">Your engine history will appear here after you add data.</p> : <>
         <div className="sensor-history-controls">
-          {unitColumn >= 0 && <label>Engine / Unit<select value={unit ?? ''} disabled={disabled} onChange={(event) => selectEngine(event.target.value)}>
+          {unitColumn >= 0 && <label>Engine<select value={unit ?? ''} disabled={disabled} onChange={(event) => selectEngine(event.target.value)}>
             {!units.includes(unit) && <option value="">Choose an engine</option>}
             {units.map((engine) => <option key={engine} value={engine}>{engine}</option>)}
           </select></label>}
-          <label>Analyze at Cycle<select value={engineRows.some((row) => row.rowIndex === selectedRow) ? selectedRow : ''} disabled={disabled || !engineRows.length} onChange={(event) => onSelectRow(csv, Number(event.target.value))}>
+          <label>Operating cycle<select value={engineRows.some((row) => row.rowIndex === selectedRow) ? selectedRow : ''} disabled={disabled || !engineRows.length} onChange={(event) => onSelectRow(csv, Number(event.target.value))}>
             {!engineRows.some((row) => row.rowIndex === selectedRow) && <option value="">Choose a valid cycle</option>}
-            {engineRows.map(({ cycle, rowIndex }) => <option key={rowIndex} value={rowIndex}>Cycle {cycle} · Row {rowIndex + 1}</option>)}
+            {engineRows.map(({ cycle, rowIndex }) => <option key={rowIndex} value={rowIndex}>Cycle {cycle}</option>)}
           </select></label>
-          <label>Sensor<select value={sensor} disabled={!available.sensors.length} onChange={(event) => setChosenSensor(event.target.value)}>{available.sensors.map((name) => <option key={name}>{name}</option>)}</select></label>
+          <label>Sensor<select value={sensor} disabled={!available.sensors.length} onChange={(event) => setChosenSensor(event.target.value)}>{available.sensors.map((name) => <option key={name} value={name}>{name.replace('sensor_', 'Sensor ')}</option>)}</select></label>
         </div>
-        {unitColumn < 0 && <p className="sensor-history-notice">Engine identity cannot be distinguished because unit_number is missing.{csv.rows.length > 1 ? ' This file is treated as one engine; only use rows from the same engine.' : ''}</p>}
+        {unitColumn < 0 && <p className="sensor-history-notice">No engine ID found. Use readings from one engine only.</p>}
         {error ? <p role="alert">{error}</p> : <>
-          <p>{points.length} valid measurements{unit !== null ? ` for engine ${unit}` : ''} through cycle {selectedCycle}. <strong>Current / Analyzed Cycle: {selectedCycle}</strong></p>
+          <p className="muted">{points.length} readings{unit !== null ? ` · Engine ${unit}` : ''} · Up to cycle {selectedCycle}</p>
           {invalid > 0 && <p role="status">Excluded {invalid} missing or non-numeric {sensor} measurements.</p>}
-          {duplicateRows > 0 && <p role="status">Excluded {duplicateRows} rows with repeated cycles for this engine. Correct duplicate cycles to include these measurements.</p>}
-          {points.length === 1 && <p>Only one measurement is available for this engine at or before the analyzed cycle. Multiple operating cycles are required to visualize a sensor trend.</p>}
-          {!current && <p role="status">The analyzed sensor value is missing, invalid, or has a duplicate cycle; its point is excluded.</p>}
+          {duplicateRows > 0 && <p role="status">Skipped {duplicateRows} readings with duplicate cycles.</p>}
+          {points.length === 1 && <p>One reading available. Add more cycles to see a trend.</p>}
+          {!current && <p role="status">The selected reading is invalid or duplicated, so its point is hidden.</p>}
           {!points.length ? <p>No valid sensor measurements are available up to this cycle.</p> : <>
-            <h4>Observed Sensor Trend</h4>
             <dl className="sensor-history-stats">
-              {Object.entries({ Current: stats.current, Initial: stats.initial, Change: stats.change, Minimum: stats.min, Maximum: stats.max, Mean: stats.mean }).map(([label, value]) => <div key={label}><dt>{label}</dt><dd>{label === 'Change' && value > 0 ? '+' : ''}{format(value)}</dd></div>)}
+              {Object.entries({ 'Selected value': stats.current, 'First value': stats.initial, Change: stats.change }).map(([label, value]) => <div key={label}><dt>{label}</dt><dd>{label === 'Change' && value > 0 ? '+' : ''}{format(value)}</dd></div>)}
             </dl>
             <div role="img" aria-label={`${sensor} history for ${unit === null ? 'uploaded engine' : `engine ${unit}`} through cycle ${selectedCycle}`} className="sensor-history-chart">
               <ResponsiveContainer width="100%" height="100%">
@@ -50,13 +49,13 @@ export default function SensorTimeSeries({ csv, selectedRow, onSelectRow, disabl
                   <XAxis dataKey="cycle" type="number" domain={[points[0].cycle, selectedCycle]} label={{ value: 'Operating Cycle', position: 'bottom', offset: 8 }} />
                   <YAxis domain={['auto', 'auto']} tickFormatter={(value) => Number(value.toPrecision(5))} width={80} label={{ value: sensor, angle: -90, position: 'insideLeft', offset: -15 }} />
                   <Tooltip labelFormatter={(cycle) => `Operating Cycle ${cycle}`} formatter={(value) => [String(value), sensor]} />
-                  <ReferenceLine x={selectedCycle} stroke="#ea580c" strokeDasharray="4 4" label={{ value: 'Current / Analyzed Cycle', position: 'insideTopRight', fill: '#9a3412', fontSize: 11 }} />
+                  <ReferenceLine x={selectedCycle} stroke="#ea580c" strokeDasharray="4 4" label={{ value: 'Selected cycle', position: 'insideTopRight', fill: '#9a3412', fontSize: 11 }} />
                   <Line type="linear" dataKey="value" name={sensor} stroke="#0284c7" strokeWidth={2} dot={points.length <= 50 ? { r: 3 } : false} activeDot={{ r: 5 }} isAnimationActive={false} />
                   {current && <ReferenceDot x={current.cycle} y={current.value} r={6} fill="#ea580c" stroke="#fff" strokeWidth={2} />}
                 </LineChart>
               </ResponsiveContainer>
             </div>
-            <p className="sensor-history-description">These descriptive measurements do not explain or establish the cause of the RUL prediction. RUL results are displayed separately.</p>
+            <details className="quiet-details"><summary>Chart details</summary><p>Measured history only; no future sensor values are predicted. Sensor changes alone do not explain the remaining-life estimate.</p><p>Minimum: {format(stats.min)} · Maximum: {format(stats.max)} · Average: {format(stats.mean)}</p></details>
           </>}
         </>}
       </>}

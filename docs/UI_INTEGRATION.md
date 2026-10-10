@@ -40,17 +40,17 @@ The backend currently allows frontend origins on port 5173.
   by exact feature name, regardless of order. Extra columns are ignored.
 - Invalid historical sensor values are omitted from the selected sensor's chart.
   An invalid analyzed row disables RUL prediction without discarding the upload.
-- The first five rows are previewed and selectable. The history controls select
+- The history controls select
   an engine and any valid operating cycle. One selected row is sent
   to `/predict` as `{ "features": { ... } }`; uploads are not batch predictions.
 - Results display RUL in operating cycles, backend risk and priority, model,
   explanation, recommendations and support source. RUL is not failure probability.
-- Dashboard counts and history reflect analyses in this browser session only;
+- Recent checks reflect analyses in this browser session only;
   repeated analyses are counted separately. Reloading clears history.
 
 ## Historical sensor chart
 
-The Engine / Unit selector uses exact unit_number values. Analyze at Cycle
+The Engine selector uses exact unit_number values. Operating cycle
 lists that engine's valid cycles in ascending order. Uploads default to the
 first engine's latest valid cycle; switching engines selects its latest cycle.
 Only rows from that engine with time_cycles <= the analyzed cycle enter the
@@ -70,7 +70,7 @@ decision cycle, even if the uploaded file contains later cycles.
 
 1. Upload frontend/public/cmapss-timeseries-sample.csv. Engine 1 opens at cycle
    192 with 192 measurements. Engine 2 opens at cycle 287 with 287 measurements.
-2. Choose Engine 1, Analyze at Cycle 50. Confirm 50 measurements, an x-axis
+2. Choose Engine 1, Operating cycle 50. Confirm 50 measurements, an x-axis
    ending at 50, and an orange current point with a dashed cycle marker.
 3. Switch sensors; confirm the Y-axis and tooltip use the chosen sensor.
 4. Upload frontend/public/cmapss-sample.csv. Confirm one point, the identity
@@ -85,8 +85,7 @@ decision cycle, even if the uploaded file contains later cycles.
 
 The backend has `/health`, `/config`, `/predict` and `/chat` endpoints.
 The AI assistant sends questions and the latest prediction to the backend chatbot.
-Image uploads are not supported. Alerts,
-Maintenance and Insights retain Afrah's coming-soon pages.
+Image uploads are not supported. The dashboard is one page with an AI assistant dialog.
 
 The backend's existing LLM explanation function expects classification fields;
 RUL results currently use its fallback explanation. RUL recommendations still
@@ -101,3 +100,10 @@ npm run lint
 node --test src/services/csv.test.js src/services/timeSeries.test.js
 ```
 
+
+## Demo layout
+
+The dashboard follows three steps: add data, explore history, and check remaining life.
+Try demo data loads the bundled multi-engine sample without a file picker.
+CSV requirements, chart details, model explanation, uploaded inputs and recent checks
+are collapsed by default. The main result shows remaining life, urgency and next steps.
