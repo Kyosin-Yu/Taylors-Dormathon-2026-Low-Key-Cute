@@ -4,6 +4,15 @@ The Dockerfile builds React and serves its output through FastAPI. Both use
 the same HTTPS origin, so no separate frontend hosting or CORS setup is needed.
 This deployment supports the forecasting model and Gemini chatbot.
 
+## Live hackathon deployment
+
+- App: https://lowkey-cute-predictiveops.onrender.com
+- Dashboard: https://dashboard.render.com/web/srv-db56bnqd0e5s73ec1go0
+- Hosting: Render Free, Docker, Singapore, GitHub `main` with automatic deploys.
+- Verified on 11 October 2026: frontend loads, `/health` is healthy,
+  `/predict` returns a valid Random Forest RUL, and `/chat` returns a Gemini answer.
+- Gemini credentials are stored in Render environment settings.
+
 ## Render (hackathon setup)
 
 1. Commit and push the merged app, graph, sample CSV and deployment files to
