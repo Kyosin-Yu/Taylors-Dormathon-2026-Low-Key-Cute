@@ -1,0 +1,13 @@
+.git
+.venv
+.env
+.env.*
+**/.env
+**/.env.*
+**/node_modules
+**/dist
+**/__pycache__
+**/*.pyc
+docs
+prototype
+backend/prediction/artifacts/failure_model.joblib

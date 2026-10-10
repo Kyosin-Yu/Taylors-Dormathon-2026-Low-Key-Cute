@@ -3,17 +3,15 @@ import { checkHealth, predict, errorMessage, normalizePrediction, chat } from ".
 import "./App.css";
 import { parseCsv } from "./services/csv";
 import ReactMarkdown from "react-markdown";
+import SensorTimeSeries from "./components/SensorTimeSeries";
 
-// C-MAPSS feature names and sample input from the existing backend demo.
-
-const DEFAULT_FEATURES = {
-  time_cycles: 126, operational_setting_1: 0.001, operational_setting_2: -0.0002,
-  sensor_2: 642.8, sensor_3: 1593.2, sensor_4: 1412.5, sensor_7: 553.1,
-  sensor_8: 2388.1, sensor_9: 9080.5, sensor_11: 47.6, sensor_12: 521.2,
-  sensor_13: 2388.1, sensor_14: 8150.3, sensor_15: 8.45,
-  sensor_17: 394, sensor_20: 38.7, sensor_21: 23.2,
-};
-const FIELDS = Object.keys(DEFAULT_FEATURES);
+// Required CSV columns match the forecasting model metadata.
+const FIELDS = [
+  "time_cycles", "operational_setting_1", "operational_setting_2",
+  "sensor_2", "sensor_3", "sensor_4", "sensor_7", "sensor_8", "sensor_9",
+  "sensor_11", "sensor_12", "sensor_13", "sensor_14", "sensor_15",
+  "sensor_17", "sensor_20", "sensor_21",
+];
 const riskColor = (risk) => ({ Critical: "#dc2626", Warning: "#ea580c", Monitor: "#ca8a04", Healthy: "#16a34a" }[risk] || "#64748b");
 
 const NAV = [
@@ -84,7 +82,7 @@ const isNum = (c) => c !== "" && Number.isFinite(Number(c));
 
 function App() {
   // ----- core state -----
-  const [values, setValues] = useState(Object.values(DEFAULT_FEATURES));
+  const [values, setValues] = useState([]);
   const [reports, setReports] = useState([]);
   const [predictionMode, setPredictionMode] = useState("");
   const KPIS = [
@@ -117,13 +115,6 @@ function App() {
   const [dragOver, setDragOver] = useState(false);
   const csvInputRef = useRef(null);
 
-  // ----- image popup state -----
-  const [imageModal, setImageModal] = useState(false);
-  const [pendingImage, setPendingImage] = useState(null); // { file, url }
-  const [attachedImage, setAttachedImage] = useState(null);
-  const [imageError, setImageError] = useState("");
-  const imageInputRef = useRef(null);
-
   useEffect(() => {
     chatEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages, chatLoading, page]);
@@ -143,15 +134,12 @@ function App() {
     setSelectedRow(index);
     setValues(data.numericIdx.map((c) => Number(data.rows[index][c])));
     setResult(null);
+    setError("");
   };
 
   const handleCsvFile = async (file) => {
     setCsvError("");
     if (!file || loading) return;
-    if (file.type.startsWith("image/")) {
-      openImageModal(file); // an image was chosen here: open the image popup instead
-      return;
-    }
     if (!file.name.toLowerCase().endsWith(".csv")) {
       setCsvError("Only .csv files are allowed.");
       return;
@@ -191,59 +179,25 @@ function App() {
   const removeCsv = () => {
     if (loading) return;
     setCsv(null);
+    setValues([]);
+    setSelectedRow(0);
+    setError("");
     setResult(null);
     setCsvError("");
   };
 
-  // ----- image functions -----
-  const pickImage = (file) => {
-    setImageError("");
-    if (!file) return;
-    if (!file.type.startsWith("image/")) {
-      setImageError("Please choose an image file (PNG, JPG or WEBP).");
-      return;
-    }
-    if (file.size > 5 * 1024 * 1024) {
-      setImageError("Image is too large (max 5 MB).");
-      return;
-    }
-    if (pendingImage) URL.revokeObjectURL(pendingImage.url);
-    setPendingImage({ file, url: URL.createObjectURL(file) });
-  };
-
-  const openImageModal = (file) => {
-    setImageError("");
-    setPendingImage(null);
-    setImageModal(true);
-    if (file) pickImage(file);
-  };
-
-  const closeImageModal = () => {
-    if (pendingImage) URL.revokeObjectURL(pendingImage.url);
-    setPendingImage(null);
-    setImageModal(false);
-    setImageError("");
-  };
-
-  const confirmImage = () => {
-    if (attachedImage) URL.revokeObjectURL(attachedImage.url);
-    setAttachedImage(pendingImage);
-    setPendingImage(null);
-    setImageModal(false);
-  };
-
   // ----- prediction -----
   const runPrediction = async (vals = values) => {
-    if (loading) return;
+    if (loading || !csv) return;
     setLoading(true);
     setError("");
     setResult(null);
     try {
-      if (vals.some((v) => v === "" || !Number.isFinite(Number(v)))) throw new Error("Enter a finite number for every feature.");
+      if (vals.length !== FIELDS.length || vals.some((v) => v === "" || !Number.isFinite(Number(v)))) throw new Error("Upload a CSV containing a valid number for every required feature.");
       const features = Object.fromEntries(FIELDS.map((name, i) => [name, Number(vals[i])]));
       const data = normalizePrediction(await predict(features));
       setResult(data);
-      setReports((previous) => [{ ...data, machine: `Analysis ${previous.length + 1}`, fault: data.risk_message, severity: data.priority * 25, rul: `${data.prediction.rul.toFixed(1)} cycles`, time: new Date().toLocaleTimeString(), values: [...vals] }, ...previous]);
+      setReports((previous) => [{ ...data, machine: `Analysis ${previous.length + 1}`, fault: data.risk_message, severity: data.priority * 25, rul: `${data.prediction.rul.toFixed(1)} cycles`, time: new Date().toLocaleTimeString(), values: [...vals], csv, selectedRow }, ...previous]);
     } catch (err) {
       console.error(err);
       setError(errorMessage(err));
@@ -255,8 +209,12 @@ function App() {
   const loadAnomaly = (row) => {
     if (loading) return;
     setValues(row.values);
+    setCsv(row.csv);
+    setSelectedRow(row.selectedRow);
+    setResult(row);
+    setError("");
+    setCsvError("");
     setPage("Prediction");
-    runPrediction(row.values);
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
 
@@ -266,7 +224,7 @@ function App() {
   };
 
   // ----- chat -----
-  // Report helper uses actual prediction output; no unsupported /chat call.
+  // Send questions and the latest prediction to the backend chatbot.
   const sendMessage = async (text = chatInput) => {
     const q = text.trim();
     if (!q || chatLoading) return;
@@ -453,13 +411,10 @@ function App() {
             >
               {/* LEFT: Sensor input (CSV upload) */}
               <div style={{ ...card, marginBottom: 0 }}>
-                <h3 style={title}>Sensor input</h3>
+                <h3 style={title}>Upload sensor CSV</h3>
                 <p>C-MAPSS remaining useful life · {predictionMode || "Checking mode…"}</p>
                 {online && predictionMode !== "forecasting" && <p role="alert">Set the backend prediction mode to forecasting to use this dashboard.</p>}
-                <p>Enter all 17 features below or upload a CSV with matching column names. <a href="/cmapss-sample.csv" download>Download sample CSV</a></p>
-                <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(150px, 1fr))", gap: 10, margin: "16px 0" }}>
-                  {FIELDS.map((name, i) => <label key={name} style={{ fontSize: 12 }}>{name}<input style={{ ...input, width: "100%" }} type="number" step="any" value={values[i]} disabled={loading} onChange={(e) => { setValues((old) => old.map((v, index) => index === i ? e.target.value : v)); setResult(null); }} /></label>)}
-                </div>
+                <p>Upload a CSV with all 17 required feature columns, then select a row to analyze. <a href="/cmapss-sample.csv" download>Download sample CSV</a></p>
 
                 <div
                   onDragOver={(e) => { e.preventDefault(); setDragOver(true); }}
@@ -480,7 +435,7 @@ function App() {
                     style={{ display: "none" }}
                     onChange={(e) => { handleCsvFile(e.target.files[0]); e.target.value = ""; }}
                   />
-                  <button style={button} onClick={() => csvInputRef.current.click()}>Choose CSV file</button>
+                  <button style={button} disabled={loading} onClick={() => csvInputRef.current.click()}>Choose CSV file</button>
                 </div>
 
                 {csvError && <p style={{ color: "#dc2626", fontSize: 13, margin: "0 0 14px" }}>{csvError}</p>}
@@ -536,32 +491,14 @@ function App() {
 
                 <div style={{ display: "flex", gap: 10, flexWrap: "wrap", alignItems: "center" }}>
                   <button
-                    style={{ ...button, opacity: loading || !online || predictionMode !== "forecasting" ? 0.5 : 1 }}
+                    style={{ ...button, opacity: loading || !csv || !online || predictionMode !== "forecasting" ? 0.5 : 1 }}
                     onClick={() => runPrediction()}
-                    disabled={loading || !online || predictionMode !== "forecasting"}
+                    disabled={loading || !csv || !online || predictionMode !== "forecasting"}
                   >
                     {loading ? "Analyzing…" : "Run prediction"}
                   </button>
-                  <button
-                    onClick={() => openImageModal()}
-                    style={{ ...button, background: "#fff", color: "#0369A1", border: "1px solid #BAE6FD" }}
-                  >
-                    Upload image
-                  </button>
                 </div>
-
-                {attachedImage && (
-                  <div style={{ display: "flex", alignItems: "center", gap: 10, marginTop: 12, fontSize: 13 }}>
-                    <img src={attachedImage.url} alt="" style={{ width: 36, height: 36, objectFit: "cover", borderRadius: 6 }} />
-                    <span style={{ color: "#334155" }}>{attachedImage.file.name}</span>
-                    <button
-                      onClick={() => { URL.revokeObjectURL(attachedImage.url); setAttachedImage(null); }}
-                      style={{ background: "transparent", border: "none", color: "#dc2626", cursor: "pointer", fontFamily: "inherit" }}
-                    >
-                      Remove
-                    </button>
-                  </div>
-                )}
+                {!csv && <p style={{ color: "#64748B", fontSize: 13 }}>Upload a valid CSV to enable prediction.</p>}
 
                 {error && <p style={{ color: "#dc2626", marginBottom: 0 }}>{error}</p>}
               </div>
@@ -571,14 +508,15 @@ function App() {
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20 }}>
                   <div>
                     <h3 style={{ ...title, marginBottom: 5 }}>Sensor overview</h3>
-                    <p style={{ margin: 0, color: "#64748B", fontSize: 12 }}>Current C-MAPSS feature values</p>
+                    <p style={{ margin: 0, color: "#64748B", fontSize: 12 }}>{csv ? `Selected CSV row ${selectedRow + 1}` : "No CSV loaded"}</p>
                   </div>
                   <span style={{ background: "#E0F2FE", color: "#0369A1", padding: "6px 10px", borderRadius: 8, fontSize: 12, fontWeight: 600 }}>
                     17 features
                   </span>
                 </div>
 
-                {FIELDS.map((name, i) => {
+                {!csv && <p style={{ color: "#64748B" }}>Upload a CSV to see the selected row’s sensor values here.</p>}
+                {csv && FIELDS.map((name, i) => {
                   const level = Math.min(100, Math.max(0, values[i]));
                   return (
                     <div key={name} style={{ marginBottom: 20 }}>
@@ -601,11 +539,13 @@ function App() {
                   );
                 })}
 
-                <p style={{ fontSize: 11, color: "#94A3B8", marginBottom: 0 }}>
+                {csv && <p style={{ fontSize: 11, color: "#94A3B8", marginBottom: 0 }}>
                   Bars are clipped to a 0–100 display scale; raw feature values above are used for prediction.
-                </p>
+                </p>}
               </div>
             </div>
+
+            <SensorTimeSeries csv={csv} selectedRow={selectedRow} onSelectRow={applyRow} disabled={loading} />
 
             {/* Machines requiring attention (full width) */}
             <div style={card}>
@@ -701,60 +641,6 @@ function App() {
           </>
         )}
       </main>
-
-      {/* ---------- image upload popup ---------- */}
-      {imageModal && (
-        <div
-          onClick={closeImageModal}
-          style={{ position: "fixed", inset: 0, zIndex: 50, background: "rgba(15,23,42,.55)", display: "grid", placeItems: "center", padding: 16 }}
-        >
-          <div
-            onClick={(e) => e.stopPropagation()}
-            role="dialog"
-            aria-modal="true"
-            aria-label="Upload image"
-            style={{ ...card, width: "100%", maxWidth: 440, marginBottom: 0 }}
-          >
-            <h3 style={title}>Upload image</h3><p>Local preview only. The current prediction model does not analyze images.</p>
-
-            <input
-              ref={imageInputRef}
-              type="file"
-              accept="image/*"
-              style={{ display: "none" }}
-              onChange={(e) => { pickImage(e.target.files[0]); e.target.value = ""; }}
-            />
-
-            {pendingImage ? (
-              <img src={pendingImage.url} alt="Preview" style={{ width: "100%", maxHeight: 260, objectFit: "contain", borderRadius: 10, background: "#F8FAFC" }} />
-            ) : (
-              <div
-                onClick={() => imageInputRef.current.click()}
-                style={{ border: "2px dashed #CBD5E1", background: "#F8FAFC", borderRadius: 12, padding: 32, textAlign: "center", color: "#64748B", cursor: "pointer" }}
-              >
-                Click to choose an image
-                <div style={{ fontSize: 12, marginTop: 4 }}>PNG, JPG or WEBP, up to 5 MB</div>
-              </div>
-            )}
-
-            {imageError && <p style={{ color: "#dc2626", fontSize: 13, marginBottom: 0 }}>{imageError}</p>}
-
-            <div style={{ display: "flex", justifyContent: "flex-end", gap: 8, marginTop: 16 }}>
-              <button onClick={closeImageModal} style={{ ...button, background: "#fff", color: "#334155", border: "1px solid #CBD5E1" }}>
-                Cancel
-              </button>
-              {pendingImage && (
-                <button onClick={() => imageInputRef.current.click()} style={{ ...button, background: "#fff", color: "#0369A1", border: "1px solid #BAE6FD" }}>
-                  Change
-                </button>
-              )}
-              <button onClick={confirmImage} disabled={!pendingImage} style={{ ...button, opacity: pendingImage ? 1 : 0.5 }}>
-                Use image
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
 
       {/* floating AI assistant button: always visible except on the chat page */}
       {page !== "AI Assistant" && (

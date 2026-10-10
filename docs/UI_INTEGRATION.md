@@ -33,7 +33,7 @@ The backend currently allows frontend origins on port 5173.
 
 ## Input and output
 
-- All 17 model features are editable, with sample values from the existing demo.
+- CSV upload is the only sensor input method. All 17 required feature columns must be present; the overview is read-only.
 - Upload `frontend/public/cmapss-sample.csv` to try CSV input. Columns are mapped
   by exact feature name, regardless of order. Extra columns are ignored.
 - Every row must contain finite numeric values for all required features.
@@ -46,9 +46,9 @@ The backend currently allows frontend origins on port 5173.
 
 ## Current feature boundaries
 
-The backend has `/health`, `/config` and `/predict`, but no `/chat` or image
-analysis endpoint. The report helper presents the latest backend report and a
-RUL definition locally. Image upload is a local preview only. Alerts,
+The backend has `/health`, `/config`, `/predict` and `/chat` endpoints.
+The AI assistant sends questions and the latest prediction to the backend chatbot.
+Image uploads are not supported. Alerts,
 Maintenance and Insights retain Afrah's coming-soon pages.
 
 The backend's existing LLM explanation function expects classification fields;

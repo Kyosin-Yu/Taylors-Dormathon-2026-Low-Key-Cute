@@ -24,5 +24,8 @@ Thumbs.db
 .cache/
 huggingface/
 
+# Optional model artifacts
+*.pkl
+
 # Required trained Random Forest model for the C-MAPSS demo
 !backend/prediction/artifacts/rul_model.joblib

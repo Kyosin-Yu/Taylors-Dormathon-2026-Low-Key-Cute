@@ -1,0 +1,9 @@
+# Forecasting and chatbot runtime only. Keep sklearn aligned with the saved model.
+fastapi==0.143.0
+uvicorn==0.54.0
+pandas==3.0.6
+numpy==2.5.3
+scikit-learn==1.9.1
+joblib==1.6.0
+python-dotenv==1.2.4
+google-genai==2.29.0
