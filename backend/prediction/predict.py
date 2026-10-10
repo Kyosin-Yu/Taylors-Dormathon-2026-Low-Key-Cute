@@ -10,14 +10,6 @@ from backend.prediction.adapters.forecasting_adapter import (
     predict as forecasting_predict,
 )
 
-from backend.prediction.adapters.text_adapter import (
-    predict as text_predict,
-)
-
-from backend.prediction.adapters.tabular_adapter import (
-    predict as tabular_predict,
-)
-
 
 def run_prediction(
     values: list[float] | None = None,
@@ -42,6 +34,7 @@ def run_prediction(
     # -----------------------------------------
 
     if PREDICTION_MODE == "text":
+        from backend.prediction.adapters.text_adapter import predict as text_predict
 
         processed_text = preprocess_text(text)
 
@@ -69,6 +62,7 @@ def run_prediction(
     # -----------------------------------------
 
     if PREDICTION_MODE == "tabular":
+        from backend.prediction.adapters.tabular_adapter import predict as tabular_predict
 
         processed_values = preprocess_values(values)
 
