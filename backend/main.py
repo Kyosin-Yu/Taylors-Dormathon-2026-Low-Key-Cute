@@ -1,74 +1,77 @@
+# main.py  -  stand-in backend so the frontend can be tested end to end.
+# Your teammate replaces the logic inside predict() and chat() with the real model.
+#
+# Run:  pip install fastapi uvicorn
+#       uvicorn main:app --reload --port 8000
+
+from typing import Any, Dict, List, Optional
+
 from fastapi import FastAPI, HTTPException
-from backend.schemas.prediction import PredictionRequest
-from backend.prediction.predict import run_prediction
-from backend.services.risk_service import interpret_risk
-from backend.config import PREDICTION_MODE
-from backend.services.recommendation_service import (generate_llm_support)
 from fastapi.middleware.cors import CORSMiddleware
+from pydantic import BaseModel
 
-app = FastAPI(
-    title="Team Lowkey Cute Predictive API",
-    version="0.1.0"
-)
+app = FastAPI(title="PredictiveOps API")
 
+# Allows the Vite dev server on any local port (5173, 5174, ...).
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[
-        "http://localhost:5173",
-        "http://127.0.0.1:5173",
-    ],
-    allow_credentials=True,
+    allow_origin_regex=r"http://(localhost|127\.0\.0\.1):\d+",
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
-@app.get("/")
-def root():
-    return {
-        "message": "Team Lowkey Cute Predictive API is running"
-    }
+
+class PredictRequest(BaseModel):
+    values: List[float]  # [vibration, temperature, pressure, current]
+
+
+class ChatMessage(BaseModel):
+    role: str
+    content: str
+
+
+class ChatRequest(BaseModel):
+    message: str
+    history: List[ChatMessage] = []
+    context: Optional[Dict[str, Any]] = None
+
 
 @app.get("/health")
 def health():
-    return {
-        "status": "healthy"
-    }
-
-
-@app.get("/config")
-def config():
-    return {
-        "prediction_mode": PREDICTION_MODE
-    }
+    return {"status": "ok"}
 
 
 @app.post("/predict")
-def predict(request: PredictionRequest):
+def predict(req: PredictRequest):
+    if len(req.values) != 4:
+        raise HTTPException(status_code=422, detail="Send exactly 4 values: vibration, temperature, pressure, current.")
 
-    try:
-        prediction = run_prediction(
-            values=request.values,
-            text=request.text
-        )
+    # ---- REPLACE THIS BLOCK WITH THE REAL MODEL ----
+    score = max(0.0, min(1.0, sum(req.values) / len(req.values) / 100))
+    if score >= 0.75:
+        label, recs = "Critical: likely bearing wear", ["Inspect the bearing within 24 hours", "Reduce load to 70% until inspected", "Reserve a spare bearing"]
+    elif score >= 0.5:
+        label, recs = "Warning: abnormal behaviour", ["Schedule an inspection this week", "Increase monitoring frequency"]
+    else:
+        label, recs = "Normal", ["No action needed"]
+    explanation = f"Average sensor level is {score * 100:.0f}% of the expected maximum (demo rule, not the real model)."
+    # -------------------------------------------------
 
-        risk = interpret_risk(prediction)
+    return {
+        "prediction": {"label": label, "score": round(score, 3)},
+        "explanation": explanation,
+        "recommendations": recs,
+        "support_source": "demo rule",
+    }
 
-        support = generate_llm_support(
-            prediction=prediction,
-            risk_level=risk["risk_level"],
-            factors=[]
-        )
 
-        return {
-            "prediction": prediction,
-            "factors": [],
-            "explanation": support["explanation"],
-            "recommendations": support["recommendations"],
-            "support_source": support["source"]
-        }
-
-    except ValueError as error:
-        raise HTTPException(
-            status_code=400,
-            detail=str(error)
-        )
+@app.post("/chat")
+def chat(req: ChatRequest):
+    # ---- REPLACE THIS BLOCK WITH THE REAL ASSISTANT ----
+    pred = (req.context or {}).get("prediction")
+    if pred:
+        reply = f"The latest prediction is '{pred.get('label')}' with a score of {pred.get('score')}. You asked: {req.message}"
+    else:
+        reply = f"You asked: {req.message}. Run a prediction first so I can use the sensor data."
+    # ----------------------------------------------------
+    return {"reply": reply}
