@@ -1,7 +1,8 @@
 import { useState, useEffect, useRef } from "react";
-import { checkHealth, predict, errorMessage, normalizePrediction } from "./api";
+import { checkHealth, predict, errorMessage, normalizePrediction, chat } from "./api";
 import "./App.css";
 import { parseCsv } from "./services/csv";
+
 
 // C-MAPSS feature names and sample input from the existing backend demo.
 
@@ -28,6 +29,7 @@ const SUGGESTIONS = [
   "Explain the latest prediction",
   "What maintenance is recommended?",
   "What does RUL mean?",
+  "Summarize the RUL distribution",
 ];
 
 const sevColor = (s) => (s >= 75 ? "#dc2626" : s >= 50 ? "#ea580c" : "#ca8a04");
@@ -98,11 +100,12 @@ function App() {
 
   // ----- chat state -----
   const [messages, setMessages] = useState([
-    { role: "assistant", text: "Hi, I can explain your latest maintenance report and its recommended actions. Run a prediction to get started." },
+    { role: "assistant", text: "Hi! Ask me about the C-MAPSS dataset, or run a prediction and I can explain the result and recommended maintenance." },
   ]);
   const [chatInput, setChatInput] = useState("");
-  const chatLoading = false;
+  const [chatLoading, setChatLoading] = useState(false);
   const chatEndRef = useRef(null);
+  
 
   // ----- backend connection status -----
   const [online, setOnline] = useState(null); // null = checking, true = online, false = offline
@@ -269,12 +272,29 @@ function App() {
     if (!q || chatLoading) return;
     setMessages((m) => [...m, { role: "user", text: q }]);
     setChatInput("");
-    const reply = /rul mean/i.test(q)
-      ? "Remaining Useful Life (RUL) is the model's estimate of operating cycles before end of useful life. Cycles are not days or a failure probability."
-      : result
-        ? `Latest prediction: ${result.prediction.rul.toFixed(1)} cycles remaining. Risk: ${result.risk_level}. ${result.risk_message}\n\n${result.explanation}\n\nRecommended actions:\n${result.recommendations.join("\n")}`
-        : "Run a prediction first to see the backend's assessment and maintenance recommendations. Free-form AI chat is not available in the current backend.";
-    setMessages((m) => [...m, { role: "assistant", text: reply }]);
+    setChatLoading(true);
+    try {
+      // Send the latest prediction so the bot can explain it.
+      const prediction = result
+        ? {
+            rul_cycles: result.prediction.rul,
+            model: result.prediction.model,
+            risk_level: result.risk_level,
+            priority: result.priority,
+            risk_message: result.risk_message,
+            explanation: result.explanation,
+            recommendations: result.recommendations,
+            features: Object.fromEntries(FIELDS.map((name, i) => [name, Number(values[i])])),
+          }
+        : null;
+      const answer = await chat(q, prediction);
+      setMessages((m) => [...m, { role: "assistant", text: answer }]);
+    } catch (err) {
+      console.error(err);
+      setMessages((m) => [...m, { role: "assistant", error: true, text: errorMessage(err) }]);
+    } finally {
+      setChatLoading(false);
+    }
   };
 
   return (
@@ -341,7 +361,7 @@ function App() {
             <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "14px 18px", borderBottom: "1px solid #e2e8f0" }}>
               <div>
                 <div style={{ fontSize: 16, fontWeight: 600, color: NAVY }}>AI assistant</div>
-                <div style={{ fontSize: 12, color: "#64748b" }}>Report helper · uses the latest backend result; free-form AI chat is unavailable</div>
+                <div style={{ fontSize: 12, color: "#64748b" }}>Ask about the dataset or your latest prediction</div>
               </div>
               <button onClick={() => goTo("Dashboard")} style={{ background: "transparent", border: "1px solid #cbd5e1", borderRadius: 8, padding: "5px 12px", fontSize: 13, fontFamily: "inherit", color: "#334155", cursor: "pointer" }}>
                 Back to dashboard

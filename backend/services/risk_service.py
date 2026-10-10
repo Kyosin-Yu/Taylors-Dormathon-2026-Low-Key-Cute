@@ -3,6 +3,11 @@
 #High Failure Risk, Demand Spike, Market Downtrend, Capacity Shortage
 #Depends on the domain
 
+
+RUL_CRITICAL = 30
+RUL_WARNING = 60
+RUL_MONITOR = 100
+
 def interpret_risk(prediction: dict) -> dict:
     """
     Interpret model prediction into an

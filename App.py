@@ -40,9 +40,13 @@ def use_project_python():
 
 
 def run(port, rebuild=False, open_browser=True):
-    for module in ("uvicorn", "fastapi", "sklearn", "pandas", "joblib", "dotenv"):
-        if importlib.util.find_spec(module) is None:
-            raise RuntimeError(f"Missing Python dependency: {module}. Install requirements.txt into .venv first.")
+    for module, pip_name in (
+        ("uvicorn", "uvicorn"), ("fastapi", "fastapi"), ("sklearn", "scikit-learn"),
+        ("pandas", "pandas"), ("joblib", "joblib"), ("dotenv", "python-dotenv"),
+        ("google.genai", "google-genai"),
+    ):
+        if not has_module(module):
+            raise RuntimeError(f"Missing Python dependency: {pip_name}. Install requirements.txt into .venv first.")
     if not (ROOT / "backend/prediction/artifacts/rul_model.joblib").is_file():
         raise RuntimeError("RUL model is missing: backend/prediction/artifacts/rul_model.joblib")
     with socket.socket() as probe:
@@ -98,6 +102,12 @@ def run(port, rebuild=False, open_browser=True):
                 process.kill()
                 process.wait()
 
+def has_module(name):
+    try:
+        return importlib.util.find_spec(name) is not None
+    except ModuleNotFoundError:
+        return False
+
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
@@ -116,6 +126,8 @@ def main():
     except (RuntimeError, subprocess.CalledProcessError, OSError) as error:
         print(f"\nUnable to start demo: {error}", file=sys.stderr)
         return 1
+
+
 
 
 if __name__ == "__main__":

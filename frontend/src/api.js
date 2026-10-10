@@ -10,10 +10,17 @@ export const checkHealth = () => Promise.all([api.get("/health"), api.get("/conf
 
 export const predict = (features) => api.post("/predict", { features }).then((r) => r.data);
 
+// Calls the backend's /chat endpoint (AI assistant).
+// Longer timeout: the backend may try a fallback model if the first one is slow.
+export const chat = (question, prediction = null) =>
+  api
+    .post("/chat", { question, prediction }, { timeout: 90000 })
+    .then((r) => r.data.answer);
+
 // Turns an axios error into a message people can act on.
 export function errorMessage(err) {
   if (err.code === "ECONNABORTED") return "The backend took too long to respond. Try again.";
-  if (!err.isAxiosError) return err.message || "Prediction failed.";
+  if (!err.isAxiosError) return err.message || "Request failed.";
   if (!err.response) return `Can't reach the backend at ${BASE_URL}. Is it running?`;
   const detail = err.response.data?.detail;
   return typeof detail === "string" ? detail : `The backend returned an error (${err.response.status}).`;
@@ -33,5 +40,7 @@ export function normalizePrediction(d) {
     explanation: d?.explanation ?? "",
     recommendations: Array.isArray(d?.recommendations) ? d.recommendations : [],
     support_source: d?.support_source ?? "n/a",
+    factors: Array.isArray(d?.factors) ? d.factors : [],
+    decision: d?.decision ?? null,
   };
 }
