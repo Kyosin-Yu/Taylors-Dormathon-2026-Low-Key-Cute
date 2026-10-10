@@ -45,11 +45,11 @@ export async function runTextPrediction(text) {
 }
 
 
-export async function runTimeSeriesPrediction(values) {
+export async function runForecastingPrediction(features) {
   const response = await axios.post(
     `${API_BASE_URL}/predict`,
     {
-      values: values,
+      features: features,
     }
   );
 

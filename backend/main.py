@@ -3,7 +3,10 @@ from backend.schemas.prediction import PredictionRequest
 from backend.prediction.predict import run_prediction
 from backend.services.risk_service import interpret_risk
 from backend.config import PREDICTION_MODE
-from backend.services.recommendation_service import (generate_llm_support)
+from backend.services.recommendation_service import (
+    generate_llm_support,
+    generate_rul_recommendations,
+)
 from fastapi.middleware.cors import CORSMiddleware
 
 app = FastAPI(
@@ -48,7 +51,8 @@ def predict(request: PredictionRequest):
     try:
         prediction = run_prediction(
             values=request.values,
-            text=request.text
+            text=request.text,
+            features=request.features,
         )
 
         risk = interpret_risk(prediction)
@@ -58,12 +62,21 @@ def predict(request: PredictionRequest):
             risk_level=risk["risk_level"],
             factors=[]
         )
+        if "rul" in prediction:
+            recommendations = generate_rul_recommendations(
+                prediction["rul"]
+            )
+        else:
+            recommendations = support["recommendations"]
 
         return {
             "prediction": prediction,
+            "risk_level": risk["risk_level"],
+            "priority": risk["priority"],
+            "risk_message": risk["message"],
             "factors": [],
             "explanation": support["explanation"],
-            "recommendations": support["recommendations"],
+            "recommendations": recommendations,
             "support_source": support["source"]
         }
 

@@ -1,14 +1,15 @@
-#Note:
-# This file is generic as we dont really know the domain yet,
-# will be configured once we get questions.
+from typing import Dict, List, Optional
 
 from pydantic import BaseModel
-from typing import List, Optional
 
 
 class PredictionRequest(BaseModel):
     values: Optional[List[float]] = None
     text: Optional[str] = None
+
+    features: Optional[
+        Dict[str, float]
+    ] = None
 
 
 class PredictionResult(BaseModel):
@@ -18,6 +19,7 @@ class PredictionResult(BaseModel):
 
 class PredictionResponse(BaseModel):
     prediction: PredictionResult
-    factors: List[str]
+    factors: list = []
     explanation: str
-    recommendations: List[str]
+    recommendations: list
+    support_source: str

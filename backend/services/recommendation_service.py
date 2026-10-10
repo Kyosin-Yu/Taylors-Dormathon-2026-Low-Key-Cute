@@ -68,3 +68,34 @@ def generate_llm_support(
                 )
             )
         }
+
+def generate_rul_recommendations(rul):
+    if rul <= 30:
+        return [
+            "Schedule maintenance immediately.",
+            "Reduce unnecessary operational load.",
+            "Inspect the machine before continued intensive use.",
+            "Prepare replacement parts or maintenance resources.",
+        ]
+
+    elif rul <= 60:
+        return [
+            "Schedule a maintenance inspection soon.",
+            "Increase monitoring frequency.",
+            "Review recent sensor degradation trends.",
+            "Prepare a preventive maintenance window.",
+        ]
+
+    elif rul <= 100:
+        return [
+            "Continue operation with increased monitoring.",
+            "Review machine health during the next planned inspection.",
+            "Track sensor trends for accelerating degradation.",
+        ]
+
+    else:
+        return [
+            "Continue normal operation.",
+            "Maintain routine monitoring.",
+            "Follow the normal preventive maintenance schedule.",
+        ]
