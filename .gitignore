@@ -27,3 +27,6 @@ huggingface/
 # Optional model artifacts
 *.pkl
 *.joblib
+
+# Required trained Random Forest model for the C-MAPSS demo
+!backend/prediction/artifacts/rul_model.joblib

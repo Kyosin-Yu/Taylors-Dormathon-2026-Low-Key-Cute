@@ -18,8 +18,8 @@ Unchanged frontend builds are reused on subsequent launches.
 First-time setup on a new computer: install Python 3.12 and Node.js, create
 `.venv`, and install `requirements.txt`. Frontend dependencies are installed
 automatically on the first build (internet is required for that installation).
-Include `backend/prediction/artifacts/rul_model.joblib` with the submission:
-model binaries are currently ignored by Git. Keep any API credentials in a
+The required Random Forest model, `backend/prediction/artifacts/rul_model.joblib`,
+is included in Git alongside its metadata. Keep any API credentials in a
 local `.env`; the backend can use fallback explanations without an API key.
 
 Optional launcher flags:
