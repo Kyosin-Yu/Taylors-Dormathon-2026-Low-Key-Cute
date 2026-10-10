@@ -1,132 +1,130 @@
 # Taylors-Dormathon-2026-Low-Key-Cute
-Project for Dormathon 2026
 
-## Start the complete demo
-
-On Windows, double-click **Start Demo.bat**. Alternatively, run from this folder:
-
-```powershell
-python App.py
-```
-
-The launcher uses `.venv` automatically, builds the React UI when needed,
-starts FastAPI, waits for readiness, and opens **http://127.0.0.1:8080**.
-Keep its terminal open during the pitch. Press **Ctrl+C** to stop the app.
-There is no separate frontend server or npm command needed for normal demos.
-Unchanged frontend builds are reused on subsequent launches.
-
-First-time setup on a new computer: install Python 3.12 and Node.js, create
-`.venv`, and install `requirements.txt`. Frontend dependencies are installed
-automatically on the first build (internet is required for that installation).
-The required Random Forest model, `backend/prediction/artifacts/rul_model.joblib`,
-is included in Git alongside its metadata. Keep any API credentials in a
-local `.env`; the backend can use fallback explanations without an API key.
-
-Optional launcher flags:
-
-```powershell
-python App.py --port 8081
-python App.py --rebuild
-python App.py --no-browser
-```
-
-For development, the separate Vite/FastAPI workflow still works. The demo build
-sends requests to its own server address; Vite development defaults to port 8000.
+Project developed for **Taylor's Dormathon 2026**.
 
 ## Track
-Track 1 — Predictive Model Track: Predict Early, Decide Better
+
+**Track 1 — Predictive Model Track: Predict Early, Decide Better**
+
+The project focuses on predictive maintenance and decision support by using
+machine learning to forecast future engine condition and convert predictions
+into actionable maintenance decisions.
+
+---
 
 ## Project Overview
-Brief explanation of what the system aims to do.
 
-## Current Status
-The official problem statement will be revealed on 10 October 2026.
-The current project is a reusable predictive system skeleton that will be adapted after the problem reveal.
+This project is an **AI-powered aircraft engine predictive maintenance
+prototype** designed to help maintenance teams identify engine degradation
+earlier and make more informed maintenance decisions.
+
+The system analyzes aircraft turbofan engine operating conditions and sensor
+data to estimate the engine's **Remaining Useful Life (RUL)**.
+
+Instead of returning only a numerical prediction, the system converts the RUL
+forecast into:
+
+- Maintenance condition
+- Risk level
+- Priority level
+- Human-readable explanation
+- Preventive maintenance recommendations
+
+The goal is to transform raw engine sensor data into actionable maintenance
+intelligence before degradation becomes critical.
+
+---
+
+## Problem Statement
+
+Aircraft engines generate large amounts of operational and sensor data, but
+raw sensor measurements alone do not directly tell maintenance teams how much
+useful operating life remains or how urgently maintenance should be planned.
+
+Late identification of engine degradation may contribute to unscheduled
+maintenance, aircraft downtime, operational disruption, and increased
+maintenance costs.
+
+Our solution addresses this problem by forecasting Remaining Useful Life and
+converting the prediction into a practical maintenance decision.
+
+---
+
+## Dataset
+
+The project uses the **NASA C-MAPSS Turbofan Engine Degradation Dataset**.
+
+For the current proof of concept, we use the **FD001 subset**.
+
+FD001 contains:
+
+- 100 training engine trajectories
+- 100 test engine trajectories
+- 1 operating condition
+- 1 degradation mode
+- Multi-sensor engine measurements across operating cycles
+
+The dataset is generated using NASA's physics-based C-MAPSS turbofan engine
+simulation environment.
+
+It is therefore **simulation data rather than live airline operational data**.
+
+The dataset is used as a proof-of-concept benchmark for Remaining Useful Life
+prediction because it provides run-to-failure engine degradation histories.
+
+---
+
+## Machine Learning Model
+
+Three regression models were evaluated:
+
+- Decision Tree Regressor
+- Random Forest Regressor
+- XGBoost Regressor
+
+The **Random Forest Regressor** was selected as the final model because it
+achieved the lowest validation RMSE.
+
+### Validation Results
+
+| Model | MAE | RMSE | R² |
+|---|---:|---:|---:|
+| Decision Tree | 12.58 | 19.33 | 0.785 |
+| Random Forest | 10.81 | **15.95** | **0.854** |
+| XGBoost | **10.79** | 16.05 | 0.852 |
+
+### Official FD001 Test Results
+
+- **MAE:** 12.44 cycles
+- **RMSE:** 16.87 cycles
+- **R²:** 0.823
+
+The system treats RUL as an estimate for maintenance planning rather than an
+exact prediction of the failure moment.
+
+---
 
 ## Core System Flow
 
-User Input
-→ Frontend
-→ FastAPI
-→ Preprocessing
-→ Predictive Model
-→ Risk / Forecast Interpretation
-→ LLM Explanation
-→ Recommendation
-→ Result Display
-
-## Tech Stack
-- Python 3.12
-- FastAPI
-- React
-- Streamlit
-- Hugging Face pretrained models
-- LLM API
-- Supabase (optional)
-- GitHub
-
-## Core Features
-1. Data Input
-2. Predictive Analysis
-3. AI Explanation
-4. Recommendation
-5. Result Visualization
-
-## Planned Model Options
-- TimesFM / Chronos — time-series forecasting
-- BERT / DeBERTa — text classification
-- Other suitable ML models for structured/tabular data
-
-## MVP Scope
-- Working input
-- Prediction
-- Risk/result interpretation
-- Explanation
-- Recommendation
-- Working Streamlit or React demo
-
-## Backend Structure
-```
-backend/
-├── main.py
-├── prediction/
-│   ├── model.py
-│   ├── preprocess.py
-│   └── predict.py
-├── services/
-│   ├── risk_service.py
-│   ├── recommendation_service.py
-│   ├── llm_service.py
-│   └── supabase_service.py
-└── schemas/
-    └── prediction.py
-```
-
-## Current Limitations
-- Final problem domain is not known yet
-- Final dataset is not known yet
-- Final model is not confirmed
-- Final input/output format is not confirmed
-
-## Development Priority
-
-P0 — Must Have
-- Prediction
-- Explanation
-- Recommendation
-- Working Demo
-
-P1 — Should Have
-- React Dashboard
-- Charts
-- Risk Visualization
-
-P2 — Nice to Have
-- Supabase
-- History
-- SHAP
-- Reports
-- User Accounts
-
-## Team Goal
-Build a stable end-to-end prototype that can detect a future problem, explain the prediction, and recommend an action before the problem becomes costly.
+```text
+Aircraft Engine Sensor Data
+        ↓
+Frontend Dashboard
+        ↓
+FastAPI Backend
+        ↓
+Feature Processing
+        ↓
+Random Forest RUL Model
+        ↓
+Remaining Useful Life Forecast
+        ↓
+Risk / Maintenance Condition
+        ↓
+Priority Assessment
+        ↓
+Explanation
+        ↓
+Preventive Maintenance Recommendation
+        ↓
+Result Display
