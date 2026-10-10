@@ -8,6 +8,11 @@ from backend.services.recommendation_service import (
     generate_rul_recommendations,
 )
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import FileResponse
+from fastapi.staticfiles import StaticFiles
+from pathlib import Path
+
+FRONTEND_DIST = Path(__file__).resolve().parents[1] / "frontend" / "dist"
 
 app = FastAPI(
     title="Team Lowkey Cute Predictive API",
@@ -27,6 +32,8 @@ app.add_middleware(
 
 @app.get("/")
 def root():
+    if (FRONTEND_DIST / "index.html").is_file():
+        return FileResponse(FRONTEND_DIST / "index.html")
     return {
         "message": "Team Lowkey Cute Predictive API is running"
     }
@@ -85,3 +92,8 @@ def predict(request: PredictionRequest):
             status_code=400,
             detail=str(error)
         )
+
+
+# Register after API routes so /health, /config and /predict keep their handlers.
+if FRONTEND_DIST.is_dir():
+    app.mount("/", StaticFiles(directory=FRONTEND_DIST, html=True), name="frontend")

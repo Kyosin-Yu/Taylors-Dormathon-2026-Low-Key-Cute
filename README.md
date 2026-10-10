@@ -1,5 +1,38 @@
 # Taylors-Dormathon-2026-Low-Key-Cute
 Project for Dormathon 2026
+
+## Start the complete demo
+
+On Windows, double-click **Start Demo.bat**. Alternatively, run from this folder:
+
+```powershell
+python App.py
+```
+
+The launcher uses `.venv` automatically, builds the React UI when needed,
+starts FastAPI, waits for readiness, and opens **http://127.0.0.1:8080**.
+Keep its terminal open during the pitch. Press **Ctrl+C** to stop the app.
+There is no separate frontend server or npm command needed for normal demos.
+Unchanged frontend builds are reused on subsequent launches.
+
+First-time setup on a new computer: install Python 3.12 and Node.js, create
+`.venv`, and install `requirements.txt`. Frontend dependencies are installed
+automatically on the first build (internet is required for that installation).
+Include `backend/prediction/artifacts/rul_model.joblib` with the submission:
+model binaries are currently ignored by Git. Keep any API credentials in a
+local `.env`; the backend can use fallback explanations without an API key.
+
+Optional launcher flags:
+
+```powershell
+python App.py --port 8081
+python App.py --rebuild
+python App.py --no-browser
+```
+
+For development, the separate Vite/FastAPI workflow still works. The demo build
+sends requests to its own server address; Vite development defaults to port 8000.
+
 ## Track
 Track 1 — Predictive Model Track: Predict Early, Decide Better
 

@@ -7,6 +7,12 @@ remain in place.
 
 ## Run locally
 
+For pitching, double-click `Start Demo.bat` in the repository root, or run
+`python App.py`. This serves the frontend and backend together on port 8080 and
+opens the browser after startup. Press Ctrl+C in the launcher terminal to stop.
+
+The commands below are the optional development workflow with separate servers.
+
 From the repository root:
 
 ```powershell
